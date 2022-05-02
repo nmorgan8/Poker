@@ -7,6 +7,7 @@ import argparse
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 from sklearn.neural_network import MLPRegressor
+from matplotlib import cm
 
 PLAYER_NAME = 'IlxxxlI'
 
@@ -174,13 +175,19 @@ class KMeansModel():
 
     def train(self):
         self.model.fit(self.data)
-        return
-
-    def evaluate(self):
-        print('kmeans eval')
 
     def plot(self):
-        pass
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.view_init(45, 60)
+        plot_data = self.data.T
+        labels = self.model.labels_
+
+        labeled_data = np.vstack([plot_data, labels])
+        print(labeled_data)
+
+        ax.scatter(labeled_data[0], labeled_data[1], labeled_data[3], c=labeled_data[4])
+        plt.show()
 
 class MLP():
     def __init__(self, df):
@@ -248,7 +255,7 @@ def main(args):
     
     if args.m == 'kmeans':
         kmean = KMeansModel(df)
-        kmean.evaluate()
+        kmean.plot()
 
     if args.m == 'mlp':
         mlp = MLP(df)
@@ -259,7 +266,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-m', default='mlp', choices=['reg', 'kmeans', 'mlp'])
+    parser.add_argument('-m', default='kmeans', choices=['reg', 'kmeans', 'mlp'])
 
     args = parser.parse_args()
     main(args)
