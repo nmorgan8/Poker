@@ -184,7 +184,6 @@ class KMeansModel():
         labels = self.model.labels_
 
         labeled_data = np.vstack([plot_data, labels])
-        print(labeled_data)
 
         ax.scatter(labeled_data[0], labeled_data[1], labeled_data[3], c=labeled_data[4])
         plt.show()
