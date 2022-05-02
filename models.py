@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import argparse
 
 from sklearn.linear_model import LinearRegression
-from sklearn.cluster import KMeans, MeanShift
+from sklearn.cluster import KMeans
+from sklearn.neural_network import MLPRegressor
 
 PLAYER_NAME = 'IlxxxlI'
 
@@ -150,12 +151,16 @@ class Regression():
                         start_hands.append([poss_cards[i], poss_cards[j], suit])
                         start_hands_num.append([poss_cards_num[i], poss_cards_num[j], suit])
 
+        self.hand_expected_values = {}
         for hand, num in zip(start_hands, start_hands_num):
-            print(hand, self.model.predict([num]) * 100)
-        return
+            self.hand_expected_values[str(hand)] = self.model.predict([num]) * 100
+        return self.hand_expected_values
 
-    def plot():
-        pass
+    def plot(self):
+        for key in self.hand_expected_values:
+            key_values = key.strip("'").strip('][').split(', ')
+            self.hand_expected_values[key]
+
 
 
 class KMeansModel():
@@ -163,46 +168,98 @@ class KMeansModel():
         self.X, self.y, self.word_to_ix = extract_data(df)
         self.X = tokenize_cards(self.X, self.word_to_ix)
         self.y = np.array(self.y)
+        self.data = np.c_[self.X, self.y]
         self.model = KMeans(n_clusters=clusters)
         self.train()
 
     def train(self):
-        print(self.X)
-        print(self.y)
-        pass
+        self.model.fit(self.data)
+        return
 
     def evaluate(self):
         print('kmeans eval')
 
-class DensityEstimation():
+    def plot(self):
+        pass
+
+class MLP():
     def __init__(self, df):
-        self.df = df
+        self.X, self.y, self.word_to_ix = extract_data(df)
+        self.X = tokenize_cards(self.X, self.word_to_ix)
+        self.y = np.array(self.y)
+        self.model = MLPRegressor()
+        self.train()
+
+    def train(self):
+        self.model.fit(self.X, self.y)
+        return
 
     def evaluate(self):
-        print('density eval')
+        start_hands = []
+        start_hands_num = []
+        poss_cards = list(self.word_to_ix.keys())
+        poss_cards_num = list(self.word_to_ix.values())
+        for i in range(len(poss_cards)):
+            for j in range(len(poss_cards)):
+                for suit in range(2):
+                    if suit == 1 and poss_cards_num[i] == poss_cards_num[j]:
+                        continue
+                    else:
+                        start_hands.append([poss_cards[i], poss_cards[j], suit])
+                        start_hands_num.append([poss_cards_num[i], poss_cards_num[j], suit])
+
+        self.hand_expected_values = {}
+        for hand, num in zip(start_hands, start_hands_num):
+            self.hand_expected_values[str(hand)] = self.model.predict([num]) * 100
+        return self.hand_expected_values
+
+    def plot(self):
+
+        for key in self.hand_expected_values:
+            key_values = key.strip("'").strip('][').split(', ')
+            self.hand_expected_values[key]
+
+        rows, cols = 13, 13
+        fig, ax = plt.subplots(rows, cols,
+                            sharex='col', 
+                            sharey='row')
+
+        poss_cards = list(self.word_to_ix.keys())
+
+        for row in reversed(range(rows)):
+            for col in reversed(range(cols)):
+
+                ax[row, col].text(0.5, 0.5, 
+                                f'{poss_cards[row]}{poss_cards[col]}',
+                                color="green",
+                                fontsize=8, 
+                                ha='center')
+
+
+        plt.show()
 
 def main(args):
     # Extract and preprocess data
     df = process_data()
     
     if args.m == 'reg':
-        model = Regression(df)
-        model.evaluate()
+        reg = Regression(df)
+        print(reg.evaluate())
     
     if args.m == 'kmeans':
-        model = KMeansModel(df)
-        model.evaluate
+        kmean = KMeansModel(df)
+        kmean.evaluate()
 
-    if args.m == 'density':
-        model = DensityEstimation(df)
-        model.evaluate
+    if args.m == 'mlp':
+        mlp = MLP(df)
+        mlp.plot()
 
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-m', default='all', choices=['reg', 'kmeans', 'density', 'all'])
+    parser.add_argument('-m', default='mlp', choices=['reg', 'kmeans', 'mlp'])
 
     args = parser.parse_args()
     main(args)
