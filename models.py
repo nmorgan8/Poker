@@ -8,9 +8,18 @@ from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 from sklearn.neural_network import MLPRegressor
 
-PLAYER_NAME = 'IlxxxlI'
+PLAYER_NAME = 'IlxxxlI' # Player username
 
 def write_data():
+    """
+    Helper method to combine all raw data files into single file and write to 'combined_data.txt'
+
+        Params:
+            None
+
+        Returns:
+            None
+    """
     files = ['data/File194.txt', 'data/File195.txt', 'data/File196.txt', 'data/File198.txt', 'data/File199.txt', 'data/File200.txt', 'data/File201.txt', 'data/File203.txt', 'data/File204.txt']
     with open('combined_data.txt', 'w') as combined:
         for file in files:
@@ -20,7 +29,13 @@ def write_data():
 
 def getgames(file):
     """
-    Helper method that groups data into each game
+    Helper method that groups data into each hand
+
+        Params:
+            file (str): raw string data from 'combined_data.txt'
+        
+        Returns:
+            None
     """
     for match in re.finditer(r'Game started at.*?Game ended at.*?\n\n', file, re.MULTILINE + re.DOTALL):
         yield match.group(0)
@@ -29,7 +44,18 @@ def getgames(file):
 # isolate into part
 def separate(game):
     """
-    Helper method that seperates the data from each game
+    Helper method that seperates each hand into partitioned components and make more usable
+
+        Params:
+            game (str): raw string data for single hand
+
+        Returns:
+            start (str): date and time of start of the game
+            gameid (str): unique id for the particular game
+            playerstartmoney (str): seat numbers of the players and starting stack counts
+            actions (str): different actions (cards dealt, players fold/bet, etc) from start fo end of hand
+            summary (str): summary of all players winnings/lossings for the hand
+            end (str): date and time of end of the game
     """
     match = re.match(r'Game started at: (.*)Game ID: (.*?)\n(.*)(Player.*)------ Summary ------(.*)Game ended at: (.*)', game, re.MULTILINE + re.DOTALL)
     try:
@@ -39,6 +65,15 @@ def separate(game):
         return game, "", "", "", "", ""
 
 def process_data(file='combined_data.txt'):
+    """
+    Method to extract data from text file and format into a pandas DataFrame
+
+        Params:
+            file (str): name of file to be processed
+
+        Returns:
+            df (pandas DataFrame): DataFrame containing all data from seperate()
+    """
     files_games = []
     with open(file, 'r') as f:
         games = getgames(''.join(f.readlines()))
@@ -55,6 +90,17 @@ def process_data(file='combined_data.txt'):
     return df
 
 def extract_data(df):
+    """
+    Method to extract data from preprocessed text
+
+        Params:
+            df (pandas DataFrame): DataFrame containing all returned data from seperate()
+
+        Returns:
+            x (numpy ndarray): data used to train/test various models
+            y (numpy ndarray): label data for the expected net gain/loss
+            card_to_idx (dict): dictionary mapping card string value to number
+    """
     card_to_idx = {
       '2': 0,
       '3': 1,
@@ -120,6 +166,16 @@ def extract_data(df):
     return x, y, card_to_idx
 
 def tokenize_cards(x, card_to_idx):
+    """
+    Method to convert cards from str to numerical representation
+
+        Params:
+            x (numpy ndarray): numpy array containing all sample data
+            card_to_idx (dict): dictionary mapping card string value to number
+
+        Returns:
+            X (numpy ndarray): numpy array containing all converted sample data
+    """
     X = []
     for row in x:
         X.append([card_to_idx[row[0]], card_to_idx[row[1]], row[2]])
@@ -127,7 +183,13 @@ def tokenize_cards(x, card_to_idx):
     return X
     
 class Regression():
+    """
+    Regression class that builds and models baseline Linear Regression
+    """
     def __init__(self, df):
+        """
+        Constructor to instantiate necessary information and data
+        """
         self.X, self.y, self.word_to_ix = extract_data(df)
         self.X = tokenize_cards(self.X, self.word_to_ix)
         self.y = np.array(self.y)
@@ -135,9 +197,15 @@ class Regression():
         self.train()
 
     def train(self):
+        """
+        Method to fit the model
+        """
         self.model.fit(self.X, self.y)
 
     def evaluate(self):
+        """
+        Method to format and predict outcomes based on trained model
+        """
         start_hands = []
         start_hands_num = []
         poss_cards = list(self.word_to_ix.keys())
@@ -157,6 +225,9 @@ class Regression():
         return self.hand_expected_values
 
     def plot(self):
+        """
+        Plot expected outcome of various hands 
+        """
 
         self.evaluate()
         plt.axis('off')
@@ -227,6 +298,9 @@ class Regression():
 
 
 class KMeansModel():
+    """
+    Regression class that builds and models KMeans model
+    """
     def __init__(self, df, clusters=3):
         self.X, self.y, self.word_to_ix = extract_data(df)
         self.X = tokenize_cards(self.X, self.word_to_ix)
@@ -255,7 +329,14 @@ class KMeansModel():
         plt.show()
 
 class MLP(Regression):
+    """
+    MLP class that builds and models baseline MLPRegressor model,
+    inherits most functionality from Regression
+    """
     def __init__(self, df):
+        """
+        Constructor to instantiate necessary information and data
+        """
         self.X, self.y, self.word_to_ix = extract_data(df)
         self.X = tokenize_cards(self.X, self.word_to_ix)
         self.y = np.array(self.y)
@@ -263,6 +344,9 @@ class MLP(Regression):
         self.train()
 
 def main(args):
+    """
+    Main Method to orchestrate all the code
+    """
     # Extract and preprocess data
     df = process_data()
     
@@ -287,5 +371,3 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     main(args)
-
-    
