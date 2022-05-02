@@ -7,7 +7,6 @@ import argparse
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 from sklearn.neural_network import MLPRegressor
-from matplotlib import cm
 
 PLAYER_NAME = 'IlxxxlI'
 
@@ -158,10 +157,73 @@ class Regression():
         return self.hand_expected_values
 
     def plot(self):
-        for key in self.hand_expected_values:
-            key_values = key.strip("'").strip('][').split(', ')
-            self.hand_expected_values[key]
 
+        self.evaluate()
+        plt.axis('off')
+
+        # print(self.hand_expected_values)
+        # for key in self.hand_expected_values:
+        #     key_values = key.strip("'").strip('][').split(', ')
+        #     print(key, self.hand_expected_values[key])
+
+        rows, cols = 13, 13
+        fig, ax = plt.subplots(rows, cols,
+                            sharex='col', 
+                            sharey='row')
+
+        poss_cards = list(self.word_to_ix.keys())
+
+        for row in range(rows):
+            for col in range(cols):
+                ax[row, col].spines['top'].set_visible(False)
+                ax[row, col].spines['right'].set_visible(False)
+                ax[row, col].spines['bottom'].set_visible(False)
+                ax[row, col].spines['left'].set_visible(False)
+
+                ax[row, col].set_xticks([])
+                ax[row, col].set_yticks([])
+
+                if row == 0:
+                    ax[row, col].set_title(poss_cards[12 - col])
+                if col == 0:
+                    ax[row, col].set_ylabel(poss_cards[12 - row])
+
+                key = [poss_cards[12 - row], poss_cards[12 - col]]
+                if row >= col: # below y = -x
+
+                    key.append(0)
+                    if self.hand_expected_values[str(key)][0] > 10:
+                        color = 'green'
+                    elif self.hand_expected_values[str(key)][0] < -10:
+                        color = 'red'
+                    else:
+                        color = 'orange'
+
+                    ax[row, col].set_facecolor(color)
+                    ax[row, col].text(0.5, 0.15, 
+                                    f'{poss_cards[12 - row]}{poss_cards[12 - col]}o\n{round(self.hand_expected_values[str(key)][0], 1)}',
+                                    # color=color,
+                                    fontsize=8, 
+                                    ha='center')
+                else: # above y = -x
+
+                    key.append(1)
+                    if self.hand_expected_values[str(key)][0] > 10:
+                        color = 'green'
+                    elif self.hand_expected_values[str(key)][0] < -10:
+                        color = 'red'
+                    else:
+                        color = 'orange'
+
+                    ax[row, col].set_facecolor(color)
+                    ax[row, col].text(0.5, 0.15, 
+                                    f'{poss_cards[12 - row]}{poss_cards[12 - col]}s\n{round(self.hand_expected_values[str(key)][0], 1)}',
+                                    # color=color,
+                                    fontsize=8, 
+                                    ha='center')
+
+        plt.subplots_adjust(wspace=0, hspace=0)
+        plt.show()
 
 
 class KMeansModel():
@@ -175,6 +237,10 @@ class KMeansModel():
 
     def train(self):
         self.model.fit(self.data)
+        return
+
+    def evaluate(self):
+        print('kmeans eval')
 
     def plot(self):
         fig = plt.figure()
@@ -188,61 +254,13 @@ class KMeansModel():
         ax.scatter(labeled_data[0], labeled_data[1], labeled_data[3], c=labeled_data[4])
         plt.show()
 
-class MLP():
+class MLP(Regression):
     def __init__(self, df):
         self.X, self.y, self.word_to_ix = extract_data(df)
         self.X = tokenize_cards(self.X, self.word_to_ix)
         self.y = np.array(self.y)
-        self.model = MLPRegressor()
+        self.model = MLPRegressor(random_state=4)
         self.train()
-
-    def train(self):
-        self.model.fit(self.X, self.y)
-        return
-
-    def evaluate(self):
-        start_hands = []
-        start_hands_num = []
-        poss_cards = list(self.word_to_ix.keys())
-        poss_cards_num = list(self.word_to_ix.values())
-        for i in range(len(poss_cards)):
-            for j in range(len(poss_cards)):
-                for suit in range(2):
-                    if suit == 1 and poss_cards_num[i] == poss_cards_num[j]:
-                        continue
-                    else:
-                        start_hands.append([poss_cards[i], poss_cards[j], suit])
-                        start_hands_num.append([poss_cards_num[i], poss_cards_num[j], suit])
-
-        self.hand_expected_values = {}
-        for hand, num in zip(start_hands, start_hands_num):
-            self.hand_expected_values[str(hand)] = self.model.predict([num]) * 100
-        return self.hand_expected_values
-
-    def plot(self):
-
-        for key in self.hand_expected_values:
-            key_values = key.strip("'").strip('][').split(', ')
-            self.hand_expected_values[key]
-
-        rows, cols = 13, 13
-        fig, ax = plt.subplots(rows, cols,
-                            sharex='col', 
-                            sharey='row')
-
-        poss_cards = list(self.word_to_ix.keys())
-
-        for row in reversed(range(rows)):
-            for col in reversed(range(cols)):
-
-                ax[row, col].text(0.5, 0.5, 
-                                f'{poss_cards[row]}{poss_cards[col]}',
-                                color="green",
-                                fontsize=8, 
-                                ha='center')
-
-
-        plt.show()
 
 def main(args):
     # Extract and preprocess data
@@ -250,7 +268,7 @@ def main(args):
     
     if args.m == 'reg':
         reg = Regression(df)
-        print(reg.evaluate())
+        reg.plot()
     
     if args.m == 'kmeans':
         kmean = KMeansModel(df)
@@ -265,7 +283,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-m', default='kmeans', choices=['reg', 'kmeans', 'mlp'])
+    parser.add_argument('-m', default='reg', choices=['reg', 'kmeans', 'mlp'])
 
     args = parser.parse_args()
     main(args)
