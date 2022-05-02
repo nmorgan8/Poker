@@ -259,7 +259,7 @@ class MLP(Regression):
         self.X, self.y, self.word_to_ix = extract_data(df)
         self.X = tokenize_cards(self.X, self.word_to_ix)
         self.y = np.array(self.y)
-        self.model = MLPRegressor(random_state=4)
+        self.model = MLPRegressor(random_state=321)
         self.train()
 
 def main(args):
